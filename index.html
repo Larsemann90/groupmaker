@@ -1,27 +1,155 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="de">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Group Maker</title>
-  <link rel="manifest" href="manifest.webmanifest">
-  <script defer src="script.js"></script>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>GroupMaker – Zufallsgruppen</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#f8fafc" />
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<style>
+:root{--bg:#f8fafc;--card:#ffffff;--muted:#6b7280;--accent:#2563eb;--accent-2:#0ea5a4;--border:#e6edf3;--radius:14px}
+*{box-sizing:border-box}html,body{height:100%;margin:0;font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;background:var(--bg);color:#0f172a}
+.container{max-width:880px;margin:0 auto;padding:18px}.header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}.h-title{font-weight:700;font-size:20px}.h-sub{color:var(--muted);font-size:13px}.grid{display:grid;grid-template-columns:1fr;gap:12px}@media(min-width:860px){.grid{grid-template-columns:1.2fr 0.8fr}}.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px;box-shadow:0 6px 20px rgba(15,23,42,0.05)}.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.input, textarea, select{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:#fff;outline:none}.small{width:auto;padding:8px 10px;font-size:14px}.btn{background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#fff;border:none;padding:10px 12px;border-radius:10px;cursor:pointer;display:inline-flex;align-items:center;gap:8px}.btn.ghost{background:transparent;color:var(--accent);border:1px solid var(--border)}.kbd{background:#f1f5f9;border:1px solid var(--border);padding:4px 8px;border-radius:8px;font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, 'Roboto Mono', monospace;font-size:13px}.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}.chip{background:#fff;padding:8px 10px;border-radius:999px;border:1px solid var(--border);display:inline-flex;align-items:center;gap:8px}.chip button{background:transparent;border:none;color:var(--muted);cursor:pointer}.title-2{font-weight:700;font-size:15px;margin-bottom:6px}.muted{color:var(--muted);font-size:13px}.groups{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;margin-top:10px}.group{background:linear-gradient(180deg, rgba(14,165,132,0.06), #fff);border-radius:12px;padding:10px;border:1px solid var(--border)}.group h4{margin:0 0 6px 0;font-size:14px}.empty{border:1px dashed var(--border);padding:20px;border-radius:12px;text-align:center;color:var(--muted)}.footer{margin-top:12px;text-align:center;color:var(--muted);font-size:13px}.footer-controls{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:10px}
+</style>
 </head>
 <body>
-  <h1>Group Maker</h1>
-  <input id="nameInput" type="text" placeholder="Name eingeben" />
-  <button onclick="addName()">Hinzufügen</button>
-  <ul id="nameList"></ul>
+<div class="container">
+  <div class="header">
+    <div>
+      <div class="h-title">GroupMaker</div>
+      <div class="h-sub">Zufällige Gruppen – offline als PWA</div>
+    </div>
+    <button id="installBtn" style="display:none" class="btn small">Installieren</button>
+  </div>
 
-  <label>Gruppengröße: <input id="groupSize" type="number" value="2" min="2"></label>
-  <button onclick="makeGroups()">Gruppen bilden</button>
+  <div class="grid">
+    <section class="card" aria-labelledby="manage-title">
+      <div class="title-2" id="manage-title">Klassen & Namen</div>
+      <div class="row">
+        <input id="listName" class="input" placeholder="Name der Liste (z. B. 9b Englisch)" aria-label="Listenname">
+        <button id="saveList" class="btn small">Speichern</button>
+      </div>
+      <div style="margin-top:8px" class="row">
+        <select id="savedLists" class="input"></select>
+        <button id="loadList" class="btn ghost small">Laden</button>
+        <button id="deleteList" class="btn ghost small">Löschen</button>
+      </div>
 
-  <div id="groups"></div>
+      <hr style="border:none;border-top:1px solid var(--border);margin:12px 0">
 
-  <script>
-    if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("service-worker.js");
-    }
-  </script>
+      <div class="title-2">Namen</div>
+      <div class="row">
+        <input id="nameInput" class="input" placeholder="Einzeln hinzufügen (Enter)" aria-label="Name">
+        <button id="addName" class="btn small">Hinzufügen</button>
+      </div>
+
+      <div class="chips" id="chips" aria-live="polite"></div>
+
+      <details style="margin-top:10px">
+        <summary class="muted">Mehrere Namen per Text (je Zeile ein Name)</summary>
+        <textarea id="bulkTextarea" rows="6" class="input" style="margin-top:8px" placeholder="Max Mustermann&#10;Erika Musterfrau"></textarea>
+        <div style="margin-top:8px" class="row">
+          <button id="bulkAdd" class="btn small">Übernehmen</button>
+          <button id="clearNames" class="btn ghost small">Alle löschen</button>
+        </div>
+      </details>
+    </section>
+
+    <section class="card" aria-labelledby="settings-title">
+      <div class="title-2" id="settings-title">Einstellungen & Aktionen</div>
+
+      <label class="muted">Modus</label>
+      <div class="row" style="margin-top:6px">
+        <label><input type="radio" name="mode" value="size" checked> Gruppengröße</label>
+        <label style="margin-left:10px"><input type="radio" name="mode" value="count"> Anzahl Gruppen</label>
+      </div>
+
+      <div id="sizeBox" style="margin-top:10px">
+        <label class="muted">Gruppengröße</label>
+        <input id="groupSize" class="input" type="number" min="2" value="2">
+      </div>
+      <div id="countBox" style="display:none;margin-top:10px">
+        <label class="muted">Anzahl Gruppen</label>
+        <input id="groupCount" class="input" type="number" min="1" value="4">
+      </div>
+
+      <div style="margin-top:12px" class="row">
+        <button id="shuffle" class="btn">Gruppen bilden</button>
+        <button id="reshuffle" class="btn ghost">Neu mischen</button>
+      </div>
+
+      <div style="margin-top:12px" class="row">
+        <button id="exportTxt" class="btn ghost small">Export TXT</button>
+        <button id="exportCsv" class="btn ghost small">Export CSV</button>
+        <button id="importBtn" class="btn small">Import</button>
+        <input id="importFile" type="file" accept=".txt,.csv,application/json" style="display:none">
+      </div>
+
+      <div id="result" style="margin-top:12px">
+        <div class="empty">Noch keine Gruppen. Namen hinzufügen und &quot;Gruppen bilden&quot; klicken.</div>
+      </div>
+
+      <div class="footer-controls">
+        <button id="copyBtn" class="btn ghost small">Als Text kopieren</button>
+        <button id="exportDataBtn" class="btn ghost small">Export Liste (JSON)</button>
+      </div>
+    </section>
+  </div>
+
+  <div class="footer">
+    <div class="muted">Speichert Daten lokal im Browser. Keine Cloud.</div>
+  </div>
+</div>
+
+<script>
+const storage = { get(k,def){try{const v=JSON.parse(localStorage.getItem(k));return v===null?def:v}catch(e){return def}}, set(k,v){localStorage.setItem(k,JSON.stringify(v))} }
+let names = storage.get('gm_names',[]), lists = storage.get('gm_lists',{}), mode = storage.get('gm_mode','size'), groupSize = storage.get('gm_groupSize',2), groupCount = storage.get('gm_groupCount',4), lastGroups = [];
+
+const nameInput=document.getElementById('nameInput'), addName=document.getElementById('addName'), chips=document.getElementById('chips'), bulkTextarea=document.getElementById('bulkTextarea'), bulkAdd=document.getElementById('bulkAdd'), groupSizeInput=document.getElementById('groupSize'), groupCountInput=document.getElementById('groupCount'), shuffleBtn=document.getElementById('shuffle'), reshuffleBtn=document.getElementById('reshuffle'), resultDiv=document.getElementById('result'), savedLists=document.getElementById('savedLists'), listNameInput=document.getElementById('listName'), saveListBtn=document.getElementById('saveList'), loadListBtn=document.getElementById('loadList'), deleteListBtn=document.getElementById('deleteList'), exportTxtBtn=document.getElementById('exportTxt'), exportCsvBtn=document.getElementById('exportCsv'), importBtn=document.getElementById('importBtn'), importFile=document.getElementById('importFile'), copyBtn=document.getElementById('copyBtn'), exportDataBtn=document.getElementById('exportDataBtn'), installBtn=document.getElementById('installBtn');
+
+function renderNames(){ chips.innerHTML=''; if(names.length===0){ chips.innerHTML='<div class="muted">Noch keine Namen hinzugefügt.</div>'; return } names.forEach((n,i)=>{ const span=document.createElement('span'); span.className='chip'; span.innerHTML=`${n} <button aria-label="entfernen" data-i="${i}">✕</button>`; chips.appendChild(span); }); storage.set('gm_names',names) }
+function renderLists(){ savedLists.innerHTML='<option value="">— Gespeicherte Listen laden —</option>'; Object.keys(lists).sort().forEach(k=>{ const o=document.createElement('option'); o.value=k; o.textContent=k; savedLists.appendChild(o) }) }
+function setModeUI(){ document.querySelectorAll('input[name="mode"]').forEach(r=>r.checked=r.value===mode); groupSizeInput.value=groupSize; groupCountInput.value=groupCount; document.getElementById('sizeBox').style.display = mode==='size'?'block':'none'; document.getElementById('countBox').style.display = mode==='count'?'block':'none'; storage.set('gm_mode', mode) }
+
+addName.addEventListener('click', ()=>{ const v=nameInput.value.trim(); if(!v) return; if(!names.includes(v)) names.push(v); nameInput.value=''; renderNames(); });
+nameInput.addEventListener('keydown',(e)=>{ if(e.key==='Enter') addName.click(); else if(e.key==='Backspace' && !nameInput.value && names.length){ names.pop(); renderNames(); } });
+chips.addEventListener('click',(e)=>{ if(e.target.tagName==='BUTTON'){ const i=parseInt(e.target.dataset.i); names.splice(i,1); renderNames(); renderGroups([]) } });
+
+bulkAdd.addEventListener('click', ()=>{ const lines=(bulkTextarea.value||'').split(/\r?\n/).map(s=>s.trim()).filter(Boolean); lines.forEach(l=>{ if(!names.includes(l)) names.push(l) }); bulkTextarea.value=''; renderNames(); });
+
+document.querySelectorAll('input[name="mode"]').forEach(r=>r.addEventListener('change', ()=>{ mode=r.value; setModeUI(); }));
+groupSizeInput.addEventListener('change', ()=>{ groupSize=Math.max(2,Number(groupSizeInput.value)||2); storage.set('gm_groupSize',groupSize); });
+groupCountInput.addEventListener('change', ()=>{ groupCount=Math.max(1,Number(groupCountInput.value)||1); storage.set('gm_groupCount',groupCount); });
+
+shuffleBtn.addEventListener('click', ()=>{ lastGroups=makeGroups(); renderGroups(lastGroups); });
+reshuffleBtn.addEventListener('click', ()=>{ lastGroups=makeGroups(); renderGroups(lastGroups); });
+
+function shuffleArray(a){ const arr=a.slice(); if(window.crypto&&crypto.getRandomValues){ for(let i=arr.length-1;i>0;i--){ const r=new Uint32Array(1); crypto.getRandomValues(r); const j=r[0]%(i+1); [arr[i],arr[j]]=[arr[j],arr[i]] } return arr } for(let i=arr.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]] } return arr }
+function makeGroups(){ const shuffled=shuffleArray(names); if(shuffled.length===0) return []; const groups=[]; if(mode==='size'){ const s=Math.max(2,Number(groupSize)||2); for(let i=0;i<shuffled.length;i+=s) groups.push(shuffled.slice(i,i+s)) } else { const c=Math.max(1,Number(groupCount)||1); for(let i=0;i<c;i++) groups.push([]); let i=0; for(const n of shuffled){ groups[i % c].push(n); i++ } } return groups }
+function renderGroups(groups){ resultDiv.innerHTML=''; if(!groups||groups.length===0){ resultDiv.innerHTML='<div class="empty">Noch keine Gruppen. Namen hinzufügen und "Gruppen bilden" klicken.</div>'; return } const wrap=document.createElement('div'); wrap.className='groups'; groups.forEach((g,i)=>{ const box=document.createElement('div'); box.className='group'; box.innerHTML=`<h4>Gruppe ${i+1}</h4><ul>${g.map(n=>'<li>'+n+'</li>').join('')}</ul>`; wrap.appendChild(box) }); resultDiv.appendChild(wrap) }
+
+copyBtn.addEventListener('click', ()=>{ const text=lastGroups.map((g,i)=>`Gruppe ${i+1}: ${g.join(', ')}`).join('\n'); navigator.clipboard.writeText(text).then(()=>{ copyBtn.textContent='Kopiert!'; setTimeout(()=>copyBtn.textContent='Als Text kopieren',1200) }).catch(()=>alert('Kopieren fehlgeschlagen')) });
+
+function download(filename,text,mime='text/plain'){ const blob=new Blob([text],{type:mime}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=filename; a.click(); URL.revokeObjectURL(a.href) }
+
+exportTxtBtn.addEventListener('click', ()=>{ if(names.length===0) return alert('Keine Namen vorhanden'); download((listNameInput.value||'liste')+'.txt', names.join('\n'),'text/plain') });
+exportCsvBtn.addEventListener('click', ()=>{ if(names.length===0) return alert('Keine Namen vorhanden'); const rows=[['Name']].concat(names.map(n=>[n])); const csv=rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n'); download((listNameInput.value||'liste')+'.csv',csv,'text/csv') });
+
+exportDataBtn.addEventListener('click', ()=>{ const data={names,settings:{mode,groupSize,groupCount},lists,exportedAt:new Date().toISOString()}; download((listNameInput.value||'groupmaker')+'.gm.json',JSON.stringify(data,null,2),'application/json') });
+
+importBtn.addEventListener('click', ()=>importFile.click());
+importFile.addEventListener('change',(e)=>{ const f=e.target.files[0]; if(!f) return; const reader=new FileReader(); reader.onload=()=>{ const txt=reader.result; try{ if(f.name.endsWith('.csv')||f.type==='text/csv'){ const lines=txt.split(/\r?\n/).map(s=>s.trim()).filter(Boolean); if(lines.length>0 && lines[0].toLowerCase().startsWith('name')) lines.shift(); lines.forEach(l=>{ if(!names.includes(l)) names.push(l) }); renderNames(); alert('CSV importiert: '+f.name) } else if(f.name.endsWith('.txt')||f.type==='text/plain'){ const lines=txt.split(/\r?\n/).map(s=>s.trim()).filter(Boolean); lines.forEach(l=>{ if(!names.includes(l)) names.push(l) }); renderNames(); alert('TXT importiert: '+f.name) } else if(f.name.endsWith('.json')||f.type==='application/json'){ const obj=JSON.parse(txt); if(Array.isArray(obj.names)){ obj.names.forEach(n=>{ if(!names.includes(n)) names.push(n) }) } if(obj.lists) lists=Object.assign({},lists,obj.lists); renderLists(); renderNames(); alert('JSON importiert') } }catch(err){ alert('Import fehlgeschlagen: '+err.message) } }; reader.readAsText(f); e.target.value=''; });
+
+saveListBtn.addEventListener('click', ()=>{ const key=(listNameInput.value||'').trim(); if(!key) return alert('Bitte Listennamen eingeben'); lists[key]=names.slice(); storage.set('gm_lists',lists); renderLists(); alert('Liste gespeichert: '+key) });
+loadListBtn.addEventListener('click', ()=>{ const key=savedLists.value; if(!key) return alert('Bitte Liste wählen'); names=(lists[key]||[]).slice(); listNameInput.value=key; renderNames(); renderGroups([]) });
+deleteListBtn.addEventListener('click', ()=>{ const key=savedLists.value; if(!key) return alert('Bitte Liste wählen'); if(confirm('Liste löschen: '+key+'?')){ delete lists[key]; storage.set('gm_lists',lists); renderLists(); if(listNameInput.value===key) listNameInput.value='' } });
+
+renderLists(); renderNames(); setModeUI();
+
+if('serviceWorker' in navigator){ window.addEventListener('load', ()=> navigator.serviceWorker.register('service-worker.js').catch(console.warn)) }
+let deferredPrompt=null; window.addEventListener('beforeinstallprompt', (e)=>{ e.preventDefault(); deferredPrompt=e; installBtn.style.display='inline-flex' }); installBtn.addEventListener('click', async ()=>{ installBtn.style.display='none'; if(deferredPrompt){ deferredPrompt.prompt(); await deferredPrompt.userChoice; deferredPrompt=null } });
+
+</script>
 </body>
 </html>

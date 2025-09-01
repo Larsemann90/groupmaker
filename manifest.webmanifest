@@ -1,9 +1,9 @@
 {
-  "name": "Group Maker",
-  "short_name": "Groups",
+  "name": "GroupMaker – Zufallsgruppen (Prototyp)",
+  "short_name": "GroupMaker",
   "start_url": ".",
   "display": "standalone",
-  "background_color": "#ffffff",
+  "background_color": "#f8fafc",
   "theme_color": "#317EFB",
   "icons": [
     {
