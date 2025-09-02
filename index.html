@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>GroupMaker Pro – Stärke-Skala</title>
+<title>GroupMaker Pro – Gruppen</title>
 <style>
 body{font-family:sans-serif;margin:0;padding:0;background:#f8fafc;color:#0f172a}
 .container{max-width:880px;margin:0 auto;padding:18px}
@@ -15,6 +15,7 @@ body{font-family:sans-serif;margin:0;padding:0;background:#f8fafc;color:#0f172a}
 .student-row{display:flex;align-items:center;gap:12px;margin-bottom:6px}
 .star{font-size:20px;color:#e5e7eb;cursor:pointer}
 .star.filled{color:#facc15}
+.group{border:1px solid #e5e7eb;padding:8px;border-radius:8px;margin:6px 0;background:#f9fafb}
 </style>
 </head>
 <body>
@@ -38,7 +39,31 @@ body{font-family:sans-serif;margin:0;padding:0;background:#f8fafc;color:#0f172a}
 <div id="listDetail" class="tab-content card">
   <h3 id="listTitle">Liste</h3>
   <div id="studentsContainer"></div>
+  <button id="groupBtn" class="btn">Gruppen einteilen</button>
+  <button id="deleteListBtn" class="btn" style="background:#dc2626">Liste löschen</button>
   <button id="backToStart" class="btn" style="margin-top:12px">Zurück zur Startseite</button>
+</div>
+
+<!-- Gruppen Einstellungen -->
+<div id="groupSettings" class="tab-content card">
+  <h3>Gruppen-Einstellungen</h3>
+  <label>Anzahl Gruppen: <input type="number" id="numGroups" min="2"></label><br><br>
+  <label>oder Gruppengröße: <input type="number" id="groupSize" min="2"></label><br><br>
+  <div>
+    <p>Soll die Stärke berücksichtigt werden?</p>
+    <label><input type="radio" name="strengthMode" value="none" checked> Nein, komplett zufällig</label><br>
+    <label><input type="radio" name="strengthMode" value="balanced"> Ja, gleich starke Gruppen</label><br>
+    <label><input type="radio" name="strengthMode" value="similar"> Ja, ähnliche Stärken zusammen</label>
+  </div>
+  <button id="createGroupsBtn" class="btn">Gruppen erstellen</button>
+  <button id="backToList" class="btn">Zurück zur Liste</button>
+</div>
+
+<!-- Ergebnis Gruppen -->
+<div id="groupResult" class="tab-content card">
+  <h3>Gruppen Ergebnis</h3>
+  <div id="groupsContainer"></div>
+  <button id="backToListFromResult" class="btn">Zurück zur Liste</button>
 </div>
 
 </div>
@@ -47,12 +72,13 @@ body{font-family:sans-serif;margin:0;padding:0;background:#f8fafc;color:#0f172a}
 // STORAGE
 const storage={get(k,d){try{const v=JSON.parse(localStorage.getItem(k));return v===null?d:v}catch(e){return d}},set(k,v){localStorage.setItem(k,JSON.stringify(v))}};
 let lists=storage.get('gm_lists',{});
+let currentListName=null;
 
-// TABS / START
-const startTab=document.getElementById('start');
-const listDetailTab=document.getElementById('listDetail');
-
-function showTab(tab){startTab.style.display='none';listDetailTab.style.display='none';tab.style.display='block';}
+// TABS
+function showTab(tabId){
+  document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
+  document.getElementById(tabId).classList.add('active');
+}
 
 function renderSavedLists(){
   const container=document.getElementById('savedListsContainer');
@@ -72,7 +98,10 @@ document.getElementById('createListBtn').addEventListener('click',()=>{
   const name=document.getElementById('newListName').value.trim();
   if(!name)return alert('Bitte einen Namen eingeben');
   if(lists[name]) return alert('Liste existiert bereits');
-  lists[name]=[];
+  const count=prompt("Wie viele Schüler hinzufügen?");
+  const num=parseInt(count);
+  if(isNaN(num)||num<1)return;
+  lists[name]=Array.from({length:num},(_,i)=>({name:"Schüler "+(i+1),skill:0}));
   storage.set('gm_lists',lists);
   document.getElementById('newListName').value='';
   renderSavedLists();
@@ -91,15 +120,26 @@ document.getElementById('quickNumberListBtn').addEventListener('click',()=>{
 
 // LISTE ÖFFNEN
 function openList(name){
+  currentListName=name;
   document.getElementById('listTitle').textContent=name;
   renderStudentList(name);
-  showTab(listDetailTab);
+  showTab('listDetail');
 }
 
-// ZURÜCK
-document.getElementById('backToStart').addEventListener('click',()=>{
-  showTab(startTab);
+// LISTE LÖSCHEN
+document.getElementById('deleteListBtn').addEventListener('click',()=>{
+  if(confirm("Liste wirklich löschen?")){
+    delete lists[currentListName];
+    storage.set('gm_lists',lists);
+    renderSavedLists();
+    showTab('start');
+  }
 });
+
+// ZURÜCK
+document.getElementById('backToStart').addEventListener('click',()=>{showTab('start')});
+document.getElementById('backToList').addEventListener('click',()=>{showTab('listDetail')});
+document.getElementById('backToListFromResult').addEventListener('click',()=>{showTab('listDetail')});
 
 // STUDENTEN RENDERN MIT STERNE
 function renderStudentList(listName){
@@ -116,7 +156,6 @@ function renderStudentList(listName){
       const star=document.createElement('span');
       star.className='star'+(i<=student.skill?' filled':'');
       star.innerHTML='★';
-      star.dataset.index=i;
       star.addEventListener('click',()=>{
         student.skill=i;
         lists[listName][index].skill=i;
@@ -127,6 +166,61 @@ function renderStudentList(listName){
     }
     container.appendChild(row);
   });
+}
+
+// GRUPPEN EINSTELLUNGEN
+document.getElementById('groupBtn').addEventListener('click',()=>{
+  showTab('groupSettings');
+});
+
+// GRUPPEN ERSTELLEN
+document.getElementById('createGroupsBtn').addEventListener('click',()=>{
+  const numGroups=parseInt(document.getElementById('numGroups').value);
+  const groupSize=parseInt(document.getElementById('groupSize').value);
+  const mode=document.querySelector('input[name="strengthMode"]:checked').value;
+  let students=[...lists[currentListName]];
+  
+  // Shuffle Funktion
+  function shuffle(arr){for(let i=arr.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]];}return arr;}
+  
+  if(mode==="balanced"){
+    // sortiere nach Skill absteigend und verteile Rundlauf
+    students.sort((a,b)=>b.skill-a.skill);
+    let groups=Array.from({length:numGroups||Math.ceil(students.length/groupSize)},()=>[]);
+    students.forEach((s,i)=>{groups[i%groups.length].push(s)});
+    renderGroups(groups);
+  } else if(mode==="similar"){
+    // sortiere nach Skill und chunk
+    students.sort((a,b)=>a.skill-b.skill);
+    let size=groupSize||Math.ceil(students.length/numGroups);
+    let groups=[];
+    for(let i=0;i<students.length;i+=size){groups.push(students.slice(i,i+size));}
+    renderGroups(groups);
+  } else {
+    // komplett zufällig
+    shuffle(students);
+    let groups=[];
+    if(numGroups){
+      groups=Array.from({length:numGroups},()=>[]);
+      students.forEach((s,i)=>groups[i%numGroups].push(s));
+    } else {
+      let size=groupSize||2;
+      for(let i=0;i<students.length;i+=size){groups.push(students.slice(i,i+size));}
+    }
+    renderGroups(groups);
+  }
+});
+
+function renderGroups(groups){
+  const container=document.getElementById('groupsContainer');
+  container.innerHTML='';
+  groups.forEach((group,i)=>{
+    const div=document.createElement('div');
+    div.className='group';
+    div.innerHTML="<strong>Gruppe "+(i+1)+":</strong><br>"+group.map(s=>s.name+" ("+s.skill+")").join(", ");
+    container.appendChild(div);
+  });
+  showTab('groupResult');
 }
 </script>
 </body>
