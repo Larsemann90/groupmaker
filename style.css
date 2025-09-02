@@ -1,0 +1,29 @@
+body {
+  font-family: Arial, sans-serif;
+  margin: 20px;
+  background: #f9f9f9;
+  color: #333;
+}
+h1 { text-align: center; }
+.hidden { display: none; }
+.pool, .group {
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 10px;
+  margin: 10px;
+  background: #fff;
+  min-height: 100px;
+}
+.dropzone {
+  list-style: none;
+  padding: 0;
+  min-height: 50px;
+}
+.dropzone li {
+  margin: 5px;
+  padding: 5px;
+  background: #eee;
+  border-radius: 4px;
+  cursor: grab;
+}
+.locked { background: #ffc107; }
